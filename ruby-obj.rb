@@ -36,18 +36,8 @@ def transall(obj,cam)
   r = norm(r)
   u = norm(u)
   rottransm = Numo::SFloat.cast([[*r,r.dot(e*-1)],[*u,u.dot(e*-1)],[*(d*-1),d.dot(e*-1)],[0,0,0,1]])
-#  tmp2=Numo::SFloat[0,0,0,1]
   if obj.class == Obj
     obj.v.shape[0].times {|x| obj.v[x,0..-1] = Numo::SFloat[*obj.v[x,0..-1],1].inner(rottransm)[0..2]}
-#  elsif obj.class == Model
-#    obj.faces.shape[0].times.lazy {|x| obj.faces.shape[1].times.lazy {|y| 
-#      obj.faces[x,y,0..-1] = Numo::SFloat[*obj.faces[x,y,0..-1],1].inner(rottransm)[0..2]}}
-#    (obj.faces.shape[0]*3).times.lazy do |x|
-#      tmp=x*3
-#      tmp2[0..2] = obj.faces[tmp..tmp+2]
-#      obj.faces[tmp..tmp+2] = tmp2.inner(rottransm)[0..2]
-#    end
-      
   end
 end
 
@@ -136,7 +126,27 @@ class Scene
 
   def initialize
     @objs={}
+    @envs=[]
+    @actors=[]
   end
+
+  def actor(name,obj)
+    @objs[name]=obj
+    @actors << name
+  end
+
+  def env(name,obj)
+    @objs[name]=obj
+    @envs << name
+  end
+
+  def draw(func)
+    @actors.sort_by {|x| @objs[x].center[2]}.each {|x| @objs[x].draw(func)}
+    @envs.sort_by {|x| @objs[x].center[2]}.each {|x| @objs[x].draw(func)}
+  end
+      
+      
+
 end
 
 class Model
@@ -238,8 +248,14 @@ class Obj
     @models.values.each {|x| (calcminmax(x) && bsphere(x) && x.facenormals) if x.faces;GC.start}
   end
 
+  def draw(func)
+    @models.keys.select {|x| @models[x].faces}.sort_by {|x| 1 - @models[x].mat.d}
+      .each_with_index {|x| func.call(@models[x],x)}
+  end
+
   def raytrace(ray)
     ray[1,0..-1] = norm(ray[1,0..-1])
+    ghtfv(GL_LIGHT0, GL_POSITION, light0pos.pack('F*'))
     p = ray[0,0..-1] - @center
     if (p_d = p.dot(ray[1,0..-1])) > 0 || (p.dot(p) < @r2) == 1
       return nil
