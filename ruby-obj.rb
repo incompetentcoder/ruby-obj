@@ -4,12 +4,43 @@ require 'numo/narray'
 $errors=["file not found".freeze,"unsupported mtl options".freeze,
          "unsupported texture options".freeze,"unsupported shapes/bezier/curves".freeze]
 
-def transvert(v,rot,trans)
+def transverts(v,rot,trans)
   rottransm=Numo::SFloat.cast([[1,0,0,trans[0]],
                               [0,Math::cos(rot),-Math::sin(rot),trans[1]],
                               [0,Math::sin(rot),Math::cos(rot),trans[2]],
                               [0,0,0,1]])
-  Numo::SFloat.cast([*v.flatten,1]).inner(rottransm)
+  v.shape[0].times {|x| v[x,0..-1] = Numo::SFloat[*v[x,0..-1],1].inner(rottransm)[0..2]}
+end
+
+def rotateall(v,trans,rot)
+  r=rot.map {|x| x/57.29577951308232}
+  sina=Math::sin(r[0])
+  cosa=Math::cos(r[0])
+  sinb=Math::sin(r[1])
+  cosb=Math::cos(r[1])
+  sinc=Math::sin(r[2])
+  cosc=Math::cos(r[2])
+  rottransm=Numo::SFloat.cast(
+    [[cosb*cosc,-cosb*sinc,sinb,trans[0]],
+    [cosa*sinc+sina*sinb*cosc,cosa*cosc-sina*sinb*sinc,-sina*cosb,trans[1]],
+    [sina*sinc-cosa*sinb*cosc,sina*cosc+cosa*sinb*sinc,cosa*cosb,trans[2]],
+    [0,0,0,1]])
+  GC.start
+  if v.class == Obj
+    v.v.shape[0].times {|x| v.v[x,0..-1] = Numo::SFloat[*v.v[x,0..-1],1].inner(rottransm)[0..2]}
+    GC.start
+    v.center = Numo::SFloat[*v.center[0..-1],1].inner(rottransm)[0..2]
+    calcminmax(v)
+    v.models.keys.each do |x|
+      if v.models[x].faces
+        calcminmax(v.models[x])
+        bsphere(v.models[x])
+        v.models[x].facenormals
+      end
+      GC.start
+    end
+  end
+  GC.start
 end
 
 def transcam(obj,cam)
@@ -60,10 +91,6 @@ def calcminmax(obj)
       zmin = obj.parent.v[x,2] if zmin > obj.parent.v[x,2]
       zmax = obj.parent.v[x,2] if zmax < obj.parent.v[x,2]
     end
-#    binding.pry
-#    xmin,xmax = v[0..-1,0..-1,0].minmax
-#    ymin,ymax = v[0..-1,0..-1,1].minmax
-#    zmin,zmax = v[0..-1,0..-1,2].minmax
   end
     obj.minv=Numo::SFloat[xmin,ymin,zmin]
     obj.maxv=Numo::SFloat[xmax,ymax,zmax]
@@ -99,24 +126,12 @@ end
 class Scene
   attr_accessor :objs
   def raytrace(ray)
-#   tmp = @objs.collect {|x| x if x.class == Obj}.sort_by {|x| (ray[0,0..-1] - x.center).sum}
-#    cols = []
-#    tmp.each do |x|
-#      cols << x.raytrace(ray)
-#    end
-#    cols
-#    @objs.collect {|x| x.raytrace(ray)}
-#    tmp = @objs.keys.sort_by {|x| ((@objs[x].center + @objs[x].radius*(ray[1,0..-1]*-1)) - ray[0,0..-1]).sum}
-#    tmp.reverse! if ray[1,0..-1].sum < 0
     arf=[]
     tmp = @objs.keys.select {|x| @objs[x].class == Obj}
     tmp.each do |x|
       tmp2 = @objs[x].raytrace(ray)
       if tmp2 != [] && tmp2 != nil
         tmp2.each {|y| arf << y}
-#          if (objs[x].mat && @models[x].mat.d == 1)
-#          break
-#        end
       end
     end
     arf.sort_by! {|x| x[2].sum}
@@ -144,9 +159,6 @@ class Scene
     @actors.sort_by {|x| @objs[x].center[2]}.each {|x| @objs[x].draw(func)}
     @envs.sort_by {|x| @objs[x].center[2]}.each {|x| @objs[x].draw(func)}
   end
-      
-      
-
 end
 
 class Model
@@ -199,7 +211,6 @@ class Model
         end
         isec << [@name,x,i]
       end
- #   end
     end
     isec.empty? ? nil : transcam(isec,ray)
   end
@@ -215,8 +226,6 @@ class Model
     end
   end
 end
-
-
 
 class Material
   attr_accessor :Ka, :Kd, :Ks, :d, :Ns, :illum,
@@ -235,7 +244,7 @@ class Obj
     b=a.read
     a.close
     @pos=Numo::SFloat[0,0,0]
-    @rot=Numo::SFloat[0,0,0]
+    @rot=Numo::SFloat[0,[0,0,0]]
     @models={}
     readobj(b)
     GC.start
@@ -243,9 +252,20 @@ class Obj
     GC.start
     bsphere(self)
     GC.start
-#    @v = @vt = @vn = nil
-#    binding.pry
-    @models.values.each {|x| (calcminmax(x) && bsphere(x) && x.facenormals) if x.faces;GC.start}
+    @models.keys.each do |x|
+      if @models[x].faces
+        calcminmax(@models[x])
+        bsphere(@models[x])
+        @models[x].facenormals
+      end
+      GC.start
+     end
+  end
+
+  def move(translation=[0,0,0],rotation=[0,0,0])
+    if translation != [0,0,0] || rotation != [0,0,0]
+      rotateall(self,translation,rotation)
+    end
   end
 
   def draw(func)
@@ -264,16 +284,8 @@ class Obj
     if a.dot(a) > @r2 == 1
       return nil
     end
-#    tmp = @models.values.collect {|x| x if x.faces}.compact.sort_by {|x| (ray[0,0..-1] - x.center).sum}
-#    cols = []
-#    tmp.each do |x|
-#      cols << x.raytrace(ray)
-#    end
-#    cols
 
     arf = []
-    #@models.values.collect {|x| x.raytrace(ray)}.compact
-#    binding.pry
     tmp = @models.keys.select {|x| @models[x].faces}
       .sort_by {|x| ((@models[x].center + @models[x].radius*(ray[1,0..-1]*-1)) - ray[0,0..-1]).sum}
     tmp.reverse! if ray[1,0..-1].sum < 0
@@ -286,14 +298,7 @@ class Obj
         end
       end
     end
-
-
- #   if arf != []
-      #arf[zsort(Numo::SFloat.cast(arf.collect{|x| x[2]}))[ray[1,2] > 0 ? 0 : -1]]
- #     arf.sort_by! {|x| (x[2] - ray[0,0..-1]).sum}
- #     ray[1,2] < 0 ? arf.reverse : arf
     arf
- #   end
   end
   
   def readobj(b)
