@@ -12,14 +12,55 @@ def transverts(v,rot,trans)
   v.shape[0].times {|x| v[x,0..-1] = Numo::SFloat[*v[x,0..-1],1].inner(rottransm)[0..2]}
 end
 
-def rotateall(v,trans,rot)
-  r=rot.map {|x| x/57.29577951308232}
-  sina=Math::sin(r[0])
-  cosa=Math::cos(r[0])
-  sinb=Math::sin(r[1])
-  cosb=Math::cos(r[1])
-  sinc=Math::sin(r[2])
-  cosc=Math::cos(r[2])
+def translateall(v,trans)
+  rottransm=Numo::SFloat.cast([[1,0,0,trans[0]],
+                               [0,1,0,trans[1]],
+                               [0,0,1,trans[2]],
+                               [0,0,0,1]])
+  if v.class == Obj
+    v.v.shape[0].times {|x| v.v[x,0..-1] = Numo::SFloat[*v.v[x,0..-1],1].inner(rottransm)[0..2]}
+    GC.start
+    v.center = Numo::SFloat[*v.center[0..-1],1].inner(rottransm)[0..2]
+    calcminmax(v)
+    v.models.keys.each do |x|
+      if v.models[x].faces
+        calcminmax(v.models[x])
+        bsphere(v.models[x])
+        v.models[x].facenormals
+      end
+      GC.start
+    end
+  end
+  GC.start
+end
+
+
+def rotateall(v,trans,r)
+#  r=rot.map {|x| x/57.29577951308232 if x!=0}
+  if r[0] != 0
+    r[0]=r[0]*0.01745
+    sina=Math::sin(r[0])
+    cosa=Math::cos(r[0])
+  else
+    sina=0.0
+    cosa=1.0
+  end
+  if r[1] != 0
+    r[1]=r[1]*0.01745
+    sinb=Math::sin(r[1])
+    cosb=Math::cos(r[1])
+  else
+    sinb=0.0
+    cosb=1.0
+  end
+  if r[2] != 0
+    r[2]=r[2]*0.01745
+    sinc=Math::sin(r[2])
+    cosc=Math::cos(r[2])
+  else
+    sinc=0.0
+    cosc=1.0
+  end
   rottransm=Numo::SFloat.cast(
     [[cosb*cosc,-cosb*sinc,sinb,trans[0]],
     [cosa*sinc+sina*sinb*cosc,cosa*cosc-sina*sinb*sinc,-sina*cosb,trans[1]],
@@ -39,6 +80,8 @@ def rotateall(v,trans,rot)
       end
       GC.start
     end
+  else
+    return Numo::SFloat[*v,1].inner(rottransm)[0..2]
   end
   GC.start
 end
@@ -124,7 +167,7 @@ end
 
 
 class Scene
-  attr_accessor :objs
+  attr_accessor :objs, :actors, :envs
   def raytrace(ray)
     arf=[]
     tmp = @objs.keys.select {|x| @objs[x].class == Obj}
@@ -263,8 +306,10 @@ class Obj
   end
 
   def move(translation=[0,0,0],rotation=[0,0,0])
-    if translation != [0,0,0] || rotation != [0,0,0]
+    if rotation != [0,0,0]
       rotateall(self,translation,rotation)
+    elsif rotation == [0,0,0] && translation != [0,0,0]
+      translateall(self,translation)
     end
   end
 
