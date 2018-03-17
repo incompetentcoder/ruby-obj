@@ -198,9 +198,9 @@ class Scene
     @envs << name
   end
 
-  def draw(func)
-    @actors.sort_by {|x| @objs[x].center[2]}.each {|x| @objs[x].draw(func)}
-    @envs.sort_by {|x| @objs[x].center[2]}.each {|x| @objs[x].draw(func)}
+  def draw(func,verts=nil,indices=nil)
+    @actors.sort_by {|x| @objs[x].center[2]}.each {|x| @objs[x].draw(func,x,verts,indices)}
+    @envs.sort_by {|x| @objs[x].center[2]}.each {|x| @objs[x].draw(func,x,verts,indices)}
   end
 end
 
@@ -313,9 +313,9 @@ class Obj
     end
   end
 
-  def draw(func)
+  def draw(func,name,verts,indices)
     @models.keys.select {|x| @models[x].faces}.sort_by {|x| 1 - @models[x].mat.d}
-      .each_with_index {|x| func.call(@models[x],x)}
+      .each {|x| func.call(@models[x],name,verts,indices)}
   end
 
   def raytrace(ray)
