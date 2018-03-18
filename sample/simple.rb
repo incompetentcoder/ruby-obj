@@ -25,8 +25,14 @@ def rotatey(v,ang)
   return Numo::SFloat[v[0]*cosa+v[2]*sina,v[1],-v[0]*sina+v[2]*cosa]
 end
 
-messages=["SPACE to start pry console","LEFT to rotate left","RIGHT to rotate right","W to move forward",
-          "S to move backard","A to strafe left","D to strafe right","ENTER to reset position"]
+def rotatex(v,ang)
+  ang = ang*0.01745
+  sina=Math::sin(ang)
+  cosa=Math::cos(ang)
+  return Numo::SFloat[v[0],v[1]*cosa-v[2]*sina,v[1]*sina+v[2]*cosa]
+end
+
+messages=["SPACE to start pry console","LEFT to rotate left","RIGHT to rotate right","UP to rotate up","DOWN to rotate down","W to move forward","S to move backard","A to strafe left","D to strafe right","ENTER to reset position"]
 
 # Press ESC to exit.
 key_callback = GLFW::create_callback(:GLFWkeyfun) do |window_handle, key, scancode, action, mods|
@@ -42,6 +48,12 @@ key_callback = GLFW::create_callback(:GLFWkeyfun) do |window_handle, key, scanco
   if key == GLFW_KEY_RIGHT && (action == GLFW_PRESS || action == GLFW_REPEAT)
     $dir = norm(rotatey($dir,-2))
   end
+  if key == GLFW_KEY_UP && (action == GLFW_PRESS || action == GLFW_REPEAT)
+    $dir = norm(rotatex($dir,2))
+  end
+  if key == GLFW_KEY_DOWN && (action == GLFW_PRESS || action == GLFW_REPEAT)
+    $dir = norm(rotatex($dir,-2))
+  end
   if key == GLFW_KEY_W && (action == GLFW_PRESS || action == GLFW_REPEAT)
     $pos = $pos + $dir
   end
@@ -49,10 +61,10 @@ key_callback = GLFW::create_callback(:GLFWkeyfun) do |window_handle, key, scanco
     $pos = $pos - $dir
   end
   if key == GLFW_KEY_A && (action == GLFW_PRESS || action == GLFW_REPEAT)
-    $pos = $pos + norm(rotatey($dir,90))
+    $pos = $pos + norm(rotatey($dir,90))*$step
   end
   if key == GLFW_KEY_D && (action == GLFW_PRESS || action == GLFW_REPEAT)
-    $pos = $pos + norm(rotatey($dir,-90))
+    $pos = $pos + norm(rotatey($dir,-90))*$step
   end
   if key == GLFW_KEY_ENTER && action == GLFW_PRESS
     $pos = Numo::SFloat[0,4,10]
@@ -92,6 +104,7 @@ if __FILE__ == $0
 #  $pos=Numo::SFloat[5,10,15]
 #  $rot=[0,0,1,0]
   messages.each {|x| pp x}
+  $step=Numo::SFloat[1,0,1]
   $pos=Numo::SFloat[0,4,10]
   $rot=[0,0,0]
   $trans=Numo::SFloat[0,0,-10]
