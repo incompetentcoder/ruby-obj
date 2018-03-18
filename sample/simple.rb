@@ -21,6 +21,9 @@ key_callback = GLFW::create_callback(:GLFWkeyfun) do |window_handle, key, scanco
   if key == GLFW_KEY_ESCAPE && action == GLFW_PRESS
     glfwSetWindowShouldClose(window_handle, 1)
   end
+  if key == GLFW_KEY_SPACE && action == GLFW_PRESS
+    binding.pry
+  end
 end
 
 mydraw = Proc.new {|x,name,verts,indices|
@@ -79,17 +82,20 @@ if __FILE__ == $0
   glfwSwapInterval(2)
   glDisable(GL_COLOR_MATERIAL)
   global_ambient = [0.1, 0.1, 0.1, 1.0] # Set Ambient Lighting To Fairly Dark Light (No Color)   
-  light0pos = [0.0, 0.0, -5.0, 1.0] # Set The Light Position   
+  light0pos = [0.0, 5.0, -5.0, 1.0] # Set The Light Position   
   light0ambient = [0.1, 0.1, 0.1, 1.0] # More Ambient Light   
   light0diffuse = [0.3, 0.3, 0.3, 1.0] # Set The Diffuse Light A Bit Brighter   
   light0specular = [0.3, 0.3, 0.5, 1.0] # Fairly Bright Specular Lighting   
-  lmodel_ambient = [0.1,0.1,0.1,1.0] # And More Ambient Light
-  glLightModelfv(GL_LIGHT_MODEL_AMBIENT,lmodel_ambient.pack('F*')) # Set The Ambient Light Model   
+#  lmodel_ambient = [0.1,0.1,0.1,1.0] # And More Ambient Light
+  light0dir = [0.01,-1.0,0.1]
+#  glLightModelfv(GL_LIGHT_MODEL_AMBIENT,lmodel_ambient.pack('F*')) # Set The Ambient Light Model   
   glLightModelfv(GL_LIGHT_MODEL_AMBIENT,global_ambient.pack('F*')) # Set The Global Ambient Light Model   
   glLightfv(GL_LIGHT0, GL_POSITION, light0pos.pack('F*')) # Set The Lights Position   
   glLightfv(GL_LIGHT0, GL_AMBIENT, light0ambient.pack('F*'))    # Set The Ambient Light   
   glLightfv(GL_LIGHT0, GL_DIFFUSE, light0diffuse.pack('F*')) # Set The Diffuse Light   
   glLightfv(GL_LIGHT0, GL_SPECULAR, light0specular.pack('F*'))  # Set Up Specular Lighting
+  glLightfv(GL_LIGHT0, GL_SPOT_DIRECTION, light0dir.pack('F*'))
+  glLightfv(GL_LIGHT0, GL_SPOT_CUTOFF,[90.0].pack('F'))
   glEnable(GL_LIGHTING) # Enable Lighting   
   glEnable(GL_LIGHT0) # Enable Light0   
 #  glMateriali(GL_FRONT, GL_SHININESS, 128) 
@@ -107,9 +113,6 @@ if __FILE__ == $0
   end
 
   glEnableClientState(GL_VERTEX_ARRAY)
-#  glVertexPointer(3,GL_FLOAT,0,verts)
-#  pp [c.actors+c.envs]
-
 
   while glfwWindowShouldClose( window ) == 0
     width_ptr = ' ' * 8
@@ -123,7 +126,8 @@ if __FILE__ == $0
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
     glMatrixMode(GL_PROJECTION)
     glLoadIdentity()
-    glFrustum(-1,1,-1,1,1.0,10000.0)
+#    glFrustum(-1,1,-1,1,1.0,1000.0)
+    GLU.gluPerspective(90,ratio,1.0,1000.0)
     glMatrixMode(GL_MODELVIEW)
     glLoadIdentity()
     tmp=glfwGetTime()
@@ -132,7 +136,9 @@ if __FILE__ == $0
 
     c.draw(mydraw,verts,indices)
     
-    glLightfv(GL_LIGHT0, GL_POSITION, light0pos.pack('F*'))     
+    glLightfv(GL_LIGHT0, GL_POSITION, light0pos.pack('F*'))
+    glLightfv(GL_LIGHT0, GL_SPOT_DIRECTION, light0dir.pack('F*'))
+    
     glfwSwapBuffers( window )
     glfwPollEvents()
   end
