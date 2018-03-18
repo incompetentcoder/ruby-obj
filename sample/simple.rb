@@ -91,6 +91,7 @@ mydraw = Proc.new {|x,name,verts,indices|
 if __FILE__ == $0
 #  $pos=Numo::SFloat[5,10,15]
 #  $rot=[0,0,1,0]
+  messages.each {|x| pp x}
   $pos=Numo::SFloat[0,4,10]
   $rot=[0,0,0]
   $trans=Numo::SFloat[0,0,-10]
