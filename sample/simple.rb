@@ -9,20 +9,54 @@ require 'glfw'
 require 'glu'
 load '../ruby-obj.rb'
 
+
 OpenGL.load_lib()
 GLFW.load_lib()
 GLU.load_lib()
 
 include OpenGL
 include GLFW
+include GLU
+
+def rotatey(v,ang)
+  ang = ang*0.01745
+  sina=Math::sin(ang)
+  cosa=Math::cos(ang)
+  return Numo::SFloat[v[0]*cosa+v[2]*sina,v[1],-v[0]*sina+v[2]*cosa]
+end
+
+messages=["SPACE to start pry console","LEFT to rotate left","RIGHT to rotate right","W to move forward",
+          "S to move backard","A to strafe left","D to strafe right","ENTER to reset position"]
 
 # Press ESC to exit.
 key_callback = GLFW::create_callback(:GLFWkeyfun) do |window_handle, key, scancode, action, mods|
-  if key == GLFW_KEY_ESCAPE && action == GLFW_PRESS
+  if key == GLFW_KEY_ESCAPE && (action == GLFW_PRESS || action == GLFW_REPEAT)
     glfwSetWindowShouldClose(window_handle, 1)
   end
   if key == GLFW_KEY_SPACE && action == GLFW_PRESS
     binding.pry
+  end
+  if key == GLFW_KEY_LEFT && (action == GLFW_PRESS || action == GLFW_REPEAT)
+    $dir = norm(rotatey($dir,2))
+  end
+  if key == GLFW_KEY_RIGHT && (action == GLFW_PRESS || action == GLFW_REPEAT)
+    $dir = norm(rotatey($dir,-2))
+  end
+  if key == GLFW_KEY_W && (action == GLFW_PRESS || action == GLFW_REPEAT)
+    $pos = $pos + $dir
+  end
+  if key == GLFW_KEY_S && (action == GLFW_PRESS || action == GLFW_REPEAT)
+    $pos = $pos - $dir
+  end
+  if key == GLFW_KEY_A && (action == GLFW_PRESS || action == GLFW_REPEAT)
+    $pos = $pos + norm(rotatey($dir,90))
+  end
+  if key == GLFW_KEY_D && (action == GLFW_PRESS || action == GLFW_REPEAT)
+    $pos = $pos + norm(rotatey($dir,-90))
+  end
+  if key == GLFW_KEY_ENTER && action == GLFW_PRESS
+    $pos = Numo::SFloat[0,4,10]
+    $dir = Numo::SFloat[0,0,-1]
   end
 end
 
@@ -55,10 +89,12 @@ mydraw = Proc.new {|x,name,verts,indices|
 }
 
 if __FILE__ == $0
-  $pos=[5,10,15]
+#  $pos=Numo::SFloat[5,10,15]
 #  $rot=[0,0,1,0]
+  $pos=Numo::SFloat[0,4,10]
   $rot=[0,0,0]
-  $trans=[0,-10,-20]
+  $trans=Numo::SFloat[0,0,-10]
+  $dir=Numo::SFloat[0,0,-1]
   glfwInit()
   b=Obj.new("blenderhousetrimine2.obj")
   a=Obj.new("blockychar.obj")
@@ -79,7 +115,7 @@ if __FILE__ == $0
   glEnable(GL_BLEND)
   glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA)
   glEnable(GL_MULTISAMPLE)
-  glfwSwapInterval(2)
+  glfwSwapInterval(1)
   glDisable(GL_COLOR_MATERIAL)
   global_ambient = [0.1, 0.1, 0.1, 1.0] # Set Ambient Lighting To Fairly Dark Light (No Color)   
   light0pos = [0.0, 5.0, -5.0, 1.0] # Set The Light Position   
@@ -127,13 +163,13 @@ if __FILE__ == $0
     glMatrixMode(GL_PROJECTION)
     glLoadIdentity()
 #    glFrustum(-1,1,-1,1,1.0,1000.0)
-    GLU.gluPerspective(90,ratio,1.0,1000.0)
+    GLU.gluPerspective(60.0,ratio,0.1,1000.0)
     glMatrixMode(GL_MODELVIEW)
     glLoadIdentity()
     tmp=glfwGetTime()
-    $rot[1]=tmp*10
-    GLU.gluLookAt(*rotateall($pos,[0,0,0],$rot),*b.center,0,1,0)
-
+ #   $rot[1]=tmp*10
+ #   GLU.gluLookAt(*rotateall($pos,[0,0,0],$rot),*b.center,0,1,0)
+    GLU.gluLookAt(*$pos,*($pos+$dir),0,1,0)
     c.draw(mydraw,verts,indices)
     
     glLightfv(GL_LIGHT0, GL_POSITION, light0pos.pack('F*'))
