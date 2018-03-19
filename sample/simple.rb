@@ -27,9 +27,10 @@ end
 
 def rotatex(v,ang)
   ang = ang*0.01745
-  sina=Math::sin(ang)
-  cosa=Math::cos(ang)
-  return Numo::SFloat[v[0],v[1]*cosa-v[2]*sina,v[1]*sina+v[2]*cosa]
+#  sina=Math::sin(ang)
+#  cosa=Math::cos(ang)
+#  return Numo::SFloat[v[0],v[1]*cosa-v[2]*sina,v[1]*sina+v[2]*cosa]
+  return Numo::SFloat[v[0],v[1]+ang,v[2]]
 end
 
 messages=["SPACE to start pry console","LEFT to rotate left","RIGHT to rotate right","UP to rotate up","DOWN to rotate down","W to move forward","S to move backard","A to strafe left","D to strafe right","ENTER to reset position"]
@@ -70,6 +71,7 @@ key_callback = GLFW::create_callback(:GLFWkeyfun) do |window_handle, key, scanco
     $pos = Numo::SFloat[0,4,10]
     $dir = Numo::SFloat[0,0,-1]
   end
+  pp $dir
 end
 
 mydraw = Proc.new {|x,name,verts,indices|
