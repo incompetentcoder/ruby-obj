@@ -95,9 +95,9 @@ def transcam(obj,cam)
   d = norm(d)
   r = norm(r)
   u = norm(u)
-  rottransm = Numo::SFloat.cast([[*r,r.dot(e*-1)],[*u,u.dot(e*-1)],[*(d*-1),d.dot(e*-1)],[0,0,0,1]])
+  rottransm = Numo::SFloat.cast([[*r,r.dot(e*-1)],[*u,u.dot(e*-1)],[*(d*-1),d.dot(e)],[0,0,0,1]])
   trans = Numo::SFloat.cast(obj.collect {|x| x[2]})
-  obj[(zsort(Numo::SFloat.cast(trans.split(trans.shape[0]).map {|x| Numo::SFloat.cast([*x.flatten,1]).inner(rottransm)})))[cam[1,2] > 0 ? 0 : -1]]
+  obj[(zsort(Numo::SFloat.cast(trans.split(trans.shape[0]).map {|x| Numo::SFloat.cast([*x.flatten,1]).inner(rottransm)})))[0]]#[cam[1,2] > 0 ? 0 : -1]]
 end
 
 def transall(obj,cam)
@@ -152,7 +152,8 @@ def zsort(obj)
   elsif obj.class == Model
     Numo::SFloat.cast(obj.faces.split(obj.faces.shape[0]).map {|x| x[0,0..-1,2].mean}).sort_index
   elsif obj.class == Numo::SFloat
-    obj[0..-1,2].sort_index
+#    pp obj
+    obj[0..-1,2].map {|x| x.abs}.sort_index
   end
 end
 
@@ -215,7 +216,7 @@ class Model
     if @faces
       ray[1,0..-1] = norm(ray[1,0..-1])
       p = ray[0,0..-1] - @center
-      if (p_d = p.dot(ray[1,0..-1])) > 0 || (p.dot(p) < @r2) == 1
+      if (p_d = p.dot(ray[1,0..-1])) > 0  || (p.dot(p) < @r2) == 1
         return nil
       end
       a = p - p_d * ray[1,0..-1]
@@ -320,9 +321,8 @@ class Obj
 
   def raytrace(ray)
     ray[1,0..-1] = norm(ray[1,0..-1])
-    ghtfv(GL_LIGHT0, GL_POSITION, light0pos.pack('F*'))
     p = ray[0,0..-1] - @center
-    if (p_d = p.dot(ray[1,0..-1])) > 0 || (p.dot(p) < @r2) == 1
+    if (p_d = p.dot(ray[1,0..-1])) > 0 # || (p.dot(p) < @r2) == 1
       return nil
     end
     a = p - p_d * ray[1,0..-1]
