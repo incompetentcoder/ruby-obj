@@ -7,7 +7,7 @@ require 'pry'
 require 'opengl'
 require 'glfw'
 require 'glu'
-load '../ruby-obj'
+load '../ruby-obj.rb'
 
 
 OpenGL.load_lib()
@@ -33,43 +33,40 @@ def rotatex(v,ang)
   return Numo::SFloat[v[0],v[1]+ang,v[2]]
 end
 
-messages=["SPACE to start pry console","LEFT to rotate left","RIGHT to rotate right","UP to rotate up","DOWN to rotate down","W to move forward","S to move backard","A to strafe left","D to strafe right","ENTER to reset position"]
+messages=["SPACE to start pry console","LEFT/RIGHT to rotate left/right","UP/DOWN to rotate up/down","W/S to move forward/backard","A/D to strafe left/right","Q/E to move up/down","ENTER to reset position"]
 
 # Press ESC to exit.
 key_callback = GLFW::create_callback(:GLFWkeyfun) do |window_handle, key, scancode, action, mods|
-  if key == GLFW_KEY_ESCAPE && (action == GLFW_PRESS || action == GLFW_REPEAT)
-    glfwSetWindowShouldClose(window_handle, 1)
-  end
-  if key == GLFW_KEY_SPACE && action == GLFW_PRESS
-    binding.pry
-  end
-  if key == GLFW_KEY_LEFT && (action == GLFW_PRESS || action == GLFW_REPEAT)
-    $dir = norm(rotatey($dir,2))
-  end
-  if key == GLFW_KEY_RIGHT && (action == GLFW_PRESS || action == GLFW_REPEAT)
-    $dir = norm(rotatey($dir,-2))
-  end
-  if key == GLFW_KEY_UP && (action == GLFW_PRESS || action == GLFW_REPEAT)
-    $dir = norm(rotatex($dir,2))
-  end
-  if key == GLFW_KEY_DOWN && (action == GLFW_PRESS || action == GLFW_REPEAT)
-    $dir = norm(rotatex($dir,-2))
-  end
-  if key == GLFW_KEY_W && (action == GLFW_PRESS || action == GLFW_REPEAT)
-    $pos = $pos + $dir
-  end
-  if key == GLFW_KEY_S && (action == GLFW_PRESS || action == GLFW_REPEAT)
-    $pos = $pos - $dir
-  end
-  if key == GLFW_KEY_A && (action == GLFW_PRESS || action == GLFW_REPEAT)
-    $pos = $pos + norm(rotatey($dir,90))*$step
-  end
-  if key == GLFW_KEY_D && (action == GLFW_PRESS || action == GLFW_REPEAT)
-    $pos = $pos + norm(rotatey($dir,-90))*$step
-  end
-  if key == GLFW_KEY_ENTER && action == GLFW_PRESS
-    $pos = Numo::SFloat[0,4,10]
-    $dir = Numo::SFloat[0,0,-1]
+  if action == GLFW_PRESS || action == GLFW_REPEAT
+    case key
+    when GLFW_KEY_ESCAPE 
+      glfwSetWindowShouldClose(window_handle, 1)
+    when GLFW_KEY_SPACE 
+      binding.pry
+    when GLFW_KEY_LEFT 
+      $dir = norm(rotatey($dir,2))
+    when GLFW_KEY_RIGHT 
+      $dir = norm(rotatey($dir,-2))
+    when GLFW_KEY_UP 
+      $dir = norm(rotatex($dir,2))
+    when GLFW_KEY_DOWN 
+      $dir = norm(rotatex($dir,-2))
+    when GLFW_KEY_W 
+      $pos = $pos + $dir
+    when GLFW_KEY_S 
+      $pos = $pos - $dir
+    when GLFW_KEY_A 
+      $pos = $pos + norm(rotatey($dir,90))*$steplr
+    when GLFW_KEY_D 
+      $pos = $pos + norm(rotatey($dir,-90))*$steplr
+    when GLFW_KEY_Q
+      $pos = $pos + $stepud
+    when GLFW_KEY_E
+      $pos = $pos - $stepud
+    when GLFW_KEY_ENTER 
+      $pos = Numo::SFloat[0,4,10]
+      $dir = Numo::SFloat[0,0,-1]
+    end
   end
 end
 
@@ -105,7 +102,8 @@ if __FILE__ == $0
 #  $pos=Numo::SFloat[5,10,15]
 #  $rot=[0,0,1,0]
   messages.each {|x| pp x}
-  $step=Numo::SFloat[1,0,1]
+  $steplr=Numo::SFloat[0.5,0,0.5]
+  $stepud=Numo::SFloat[0,0.5,0]
   $pos=Numo::SFloat[0,4,10]
   $rot=[0,0,0]
   $trans=Numo::SFloat[0,0,-10]
