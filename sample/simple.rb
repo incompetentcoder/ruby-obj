@@ -7,7 +7,7 @@ require 'pry'
 require 'opengl'
 require 'glfw'
 require 'glu'
-load '../ruby-obj.rb'
+load '../ruby-obj'
 
 
 OpenGL.load_lib()
@@ -71,7 +71,6 @@ key_callback = GLFW::create_callback(:GLFWkeyfun) do |window_handle, key, scanco
     $pos = Numo::SFloat[0,4,10]
     $dir = Numo::SFloat[0,0,-1]
   end
-  pp $dir
 end
 
 mydraw = Proc.new {|x,name,verts,indices|
@@ -178,7 +177,6 @@ if __FILE__ == $0
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
     glMatrixMode(GL_PROJECTION)
     glLoadIdentity()
-#    glFrustum(-1,1,-1,1,1.0,1000.0)
     GLU.gluPerspective(60.0,ratio,0.1,1000.0)
     glMatrixMode(GL_MODELVIEW)
     glLoadIdentity()
@@ -186,10 +184,11 @@ if __FILE__ == $0
  #   $rot[1]=tmp*10
  #   GLU.gluLookAt(*rotateall($pos,[0,0,0],$rot),*b.center,0,1,0)
     GLU.gluLookAt(*$pos,*($pos+$dir),0,1,0)
-    c.draw(mydraw,verts,indices)
     
     glLightfv(GL_LIGHT0, GL_POSITION, light0pos.pack('F*'))
     glLightfv(GL_LIGHT0, GL_SPOT_DIRECTION, light0dir.pack('F*'))
+
+    c.draw(mydraw,verts,indices)
     
     glfwSwapBuffers( window )
     glfwPollEvents()
