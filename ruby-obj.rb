@@ -12,6 +12,19 @@ def transverts(v,rot,trans)
   v.shape[0].times {|x| v[x,0..-1] = Numo::SFloat[*v[x,0..-1],1].inner(rottransm)[0..2]}
 end
 
+def transcammat(cam)
+  e = cam[0,0..-1] #origin
+  d = cam[1,0..-1] #direction
+  u = Numo::SFloat[0,1,0] #up
+  r = cross(d,u)
+  u = cross(r,d)
+  d = norm(d)
+  r = norm(r)
+  u = norm(u)
+  rottransm = Numo::SFloat.cast([[*r,r.dot(e*-1)],[*u,u.dot(e*-1)],[*(d*-1),d.dot(e)],[0,0,0,1]])
+end
+
+
 def translateall(v,trans)
   rottransm=Numo::SFloat.cast([[1,0,0,trans[0]],
                                [0,1,0,trans[1]],
@@ -200,8 +213,14 @@ class Scene
   end
 
   def draw(func,verts=nil,indices=nil)
-    @actors.sort_by {|x| @objs[x].center[2]}.each {|x| @objs[x].draw(func,x,verts,indices)}
-    @envs.sort_by {|x| @objs[x].center[2]}.each {|x| @objs[x].draw(func,x,verts,indices)}
+    if $pos
+      rotm = transcammat(Numo::SFloat[$pos,$dir])
+      @actors.sort_by {|x| Numo::SFloat[*@objs[x].center,1].inner(rotm)[2]}.each {|x| @objs[x].draw(func,x,verts,indices)}
+      @envs.sort_by {|x| Numo::SFloat[*@objs[x].center,1].inner(rotm)[2]}.each {|x| @objs[x].draw(func,x,verts,indices)}
+    else
+      @actors.sort_by {|x| @objs[x].center[2]}.each {|x| @objs[x].draw(func,x,verts,indices)}
+      @envs.sort_by {|x| @objs[x].center[2]}.each {|x| @objs[x].draw(func,x,verts,indices)}
+    end
   end
 end
 

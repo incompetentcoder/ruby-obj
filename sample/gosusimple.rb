@@ -102,11 +102,14 @@ if __FILE__ == $0
       glClearColor(0,0,0,1)
       b=Obj.new("blenderhousetrimine2.obj")
       a=Obj.new("blockychar.obj")
+      d=Obj.new("blenderhousetrimine2.obj")
       b.models.keys.sort_by! {|x| 1 - b.models[x].mat.d}
       a.move([5,0,-10],[0,90,0])
       b.move([5,0,-10],[0,0,0])
+      d.move([4,0,-35],[0,0,0])
       @c=Scene.new
-      @c.env("house",b)
+      @c.env("house1",b)
+      @c.env("house2",d)
       @c.actor("troll",a)
       10.times {|x| GC.start}
 
