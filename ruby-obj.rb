@@ -35,12 +35,10 @@ def translateall(v,trans)
     GC.start
     v.center = Numo::SFloat[*v.center[0..-1],1].inner(rottransm)[0..2]
     calcminmax(v)
-    v.models.keys.each do |x|
-      if v.models[x].faces
+    v.drawing.each do |x|
         calcminmax(v.models[x])
         bsphere(v.models[x])
         v.models[x].facenormals
-      end
       GC.start
     end
   end
@@ -85,12 +83,10 @@ def rotateall(v,trans,r)
     GC.start
     v.center = Numo::SFloat[*v.center[0..-1],1].inner(rottransm)[0..2]
     calcminmax(v)
-    v.models.keys.each do |x|
-      if v.models[x].faces
+    v.drawing.each do |x|
         calcminmax(v.models[x])
         bsphere(v.models[x])
         v.models[x].facenormals
-      end
       GC.start
     end
   else
@@ -296,7 +292,7 @@ class Material
 end
 
 class Obj
-  attr_accessor :models, :materials, :v, :vt, :vn, :pos, :rot, :center, :radius, :minv, :maxv, :r2
+  attr_accessor :models, :materials, :v, :vt, :vn, :pos, :rot, :center, :radius, :minv, :maxv, :r2, :drawing
   def initialize(filename)
     begin
       a=File.open(filename)
@@ -315,14 +311,8 @@ class Obj
     GC.start
     bsphere(self)
     GC.start
-    @models.keys.each do |x|
-      if @models[x].faces
-        calcminmax(@models[x])
-        bsphere(@models[x])
-        @models[x].facenormals
-      end
-      GC.start
-     end
+    @drawing = @models.keys.select {|x| @models[x].faces}.sort_by {|x| 1- @models[x].mat.d}
+    @drawing.each {|x| calcminmax(@models[x]);bsphere(@models[x]);@models[x].facenormals;GC.start}
   end
 
   def move(translation=[0,0,0],rotation=[0,0,0])
@@ -334,8 +324,7 @@ class Obj
   end
 
   def draw(func,name,verts,indices)
-    @models.keys.select {|x| @models[x].faces}.sort_by {|x| 1 - @models[x].mat.d}
-      .each {|x| func.call(@models[x],name,verts,indices)}
+    @drawing.each {|x| func.call(@models[x],name,verts,indices)}
   end
 
   def raytrace(ray)
@@ -350,8 +339,8 @@ class Obj
     end
 
     arf = []
-    tmp = @models.keys.select {|x| @models[x].faces}
-      .sort_by {|x| ((@models[x].center + @models[x].radius*(ray[1,0..-1]*-1)) - ray[0,0..-1]).sum}
+    tmp = #@models.keys.select {|x| @models[x].faces}
+      @drawing.sort_by {|x| ((@models[x].center + @models[x].radius*(ray[1,0..-1]*-1)) - ray[0,0..-1]).sum}
     tmp.reverse! if ray[1,0..-1].sum < 0
     tmp.each do |x|
       tmp2 = @models[x].raytrace(ray)

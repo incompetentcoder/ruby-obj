@@ -103,13 +103,19 @@ if __FILE__ == $0
       b=Obj.new("blenderhousetrimine2.obj")
       a=Obj.new("blockychar.obj")
       d=Obj.new("blenderhousetrimine2.obj")
-      b.models.keys.sort_by! {|x| 1 - b.models[x].mat.d}
-      a.move([5,0,-10],[0,90,0])
-      b.move([5,0,-10],[0,0,0])
-      d.move([4,0,-35],[0,0,0])
+      e=Obj.new("blenderhousetrimine2.obj")
+      f=Obj.new("blenderhousetrimine2.obj")
+#      b.models.keys.sort_by! {|x| 1 - b.models[x].mat.d}
+      a.move([10,0,-10],[0,90,0])
+      b.move([10,0,-10],[0,0,0])
+      d.move([10,0,-35],[0,0,0])
+      e.move([-15,0,-10],[0,0,0])
+      f.move([-15,0,-35],[0,0,0])
       @c=Scene.new
       @c.env("house1",b)
       @c.env("house2",d)
+      @c.env("house3",e)
+      @c.env("house4",f)
       @c.actor("troll",a)
       10.times {|x| GC.start}
 
