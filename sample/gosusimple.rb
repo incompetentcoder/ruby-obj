@@ -69,8 +69,9 @@ if __FILE__ == $0
 #  $pos=Numo::SFloat[5,10,15]
 #  $rot=[0,0,1,0]
   $messages.each {|x| pp x}
-  $steplr=Numo::SFloat[0.5,0,0.5]
-  $stepud=Numo::SFloat[0,0.5,0]
+  $steplr=Numo::SFloat[0.2,0,0.2]
+  $stepud=Numo::SFloat[0,0.2,0]
+  $stepfb=Numo::SFloat[0.4,0.4,0.4]
   $pos=Numo::SFloat[0,4,10]
   $rot=[0,0,0]
   $trans=Numo::SFloat[0,0,-10]
@@ -79,8 +80,9 @@ if __FILE__ == $0
     def initialize
       super(640,480)
       self.caption="simple"
-      self.update_interval=20
+      self.update_interval=33.3
       @font=Gosu::Font.new(14)
+      @redraw = true
       global_ambient = [0.1, 0.1, 0.1, 1.0] # Set Ambient Lighting To Fairly Dark Light (No Color)   
       $light0pos = [0.0, 5.0, -5.0, 1.0] # Set The Light Position   
       light0ambient = [0.1, 0.1, 0.1, 1.0] # More Ambient Light   
@@ -134,40 +136,56 @@ if __FILE__ == $0
       glEnableClientState(GL_VERTEX_ARRAY)
     end
 
+    def needs_redraw?
+      @redraw
+    end
+
     def update
+      @redraw = false
       if Gosu.button_down? Gosu::KB_LEFT
         $dir = norm(rotatey($dir,2))
+        @redraw = true
       end
       if Gosu.button_down? Gosu::KB_RIGHT
         $dir = norm(rotatey($dir,-2))
+        @redraw = true
       end
       if Gosu.button_down? Gosu::KB_UP
         $dir = norm(rotatex($dir,2))
+        @redraw = true
       end
       if Gosu.button_down? Gosu::KB_DOWN
         $dir = norm(rotatex($dir,-2))
+        @redraw = true
       end
       if Gosu.button_down? Gosu::KB_W
-        $pos = $pos + $dir
+        $pos = $pos + $dir*$stepfb
+        @redraw = true
       end
       if Gosu.button_down? Gosu::KB_S
-        $pos = $pos - $dir
+        $pos = $pos - $dir*$stepfb
+        @redraw = true
       end
       if Gosu.button_down? Gosu::KB_A
         $pos = $pos + norm(rotatey($dir,90))*$steplr
+        @redraw = true
       end
       if Gosu.button_down? Gosu::KB_D
         $pos = $pos + norm(rotatey($dir,-90))*$steplr
+        @redraw = true
       end
       if Gosu.button_down? Gosu::KB_Q
         $pos = $pos + $stepud
+        @redraw = true
       end
       if Gosu.button_down? Gosu::KB_E
         $pos = $pos - $stepud
+        @redraw = true
       end
       if Gosu.button_down? Gosu::KB_RETURN
         $pos = Numo::SFloat[0,4,10]
         $dir = Numo::SFloat[0,0,-1]
+        @redraw = true
       end
     end
 
