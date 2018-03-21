@@ -66,8 +66,9 @@ if __FILE__ == $0
 #  $pos=Numo::SFloat[5,10,15]
 #  $rot=[0,0,1,0]
   messages.each {|x| pp x}
-  $steplr=Numo::SFloat[0.5,0,0.5]
-  $stepud=Numo::SFloat[0,0.5,0]
+  $steplr=Numo::SFloat[0.2,0,0.2]
+  $stepud=Numo::SFloat[0,0.2,0]
+  $stepfb=Numo::SFloat[0.4,0.4,0.4]
   $pos=Numo::SFloat[0,4,10]
   $rot=[0,0,0]
   $trans=Numo::SFloat[0,0,-10]
@@ -79,12 +80,20 @@ if __FILE__ == $0
   sud=0
   b=Obj.new("blenderhousetrimine2.obj")
   a=Obj.new("blockychar.obj")
-  b.models.keys.sort_by! {|x| 1 - b.models[x].mat.d}
-  a.move([5,0,-10],[0,90,0])
-  b.move([5,0,-10],[0,0,0])
-  c=Scene.new
-  c.env("house",b)
-  c.actor("troll",a)
+  d=Obj.new("blenderhousetrimine2.obj")
+  e=Obj.new("blenderhousetrimine2.obj")
+  f=Obj.new("blenderhousetrimine2.obj")
+  a.move([10,0,-10],[0,90,0])
+  b.move([10,0,-10],[0,0,0])
+  d.move([10,0,-35],[0,0,0])
+  e.move([-15,0,-10],[0,0,0])
+  f.move([-15,0,-35],[0,0,0])
+  $c=Scene.new
+  $c.env("house1",b)
+  $c.env("house2",d)
+  $c.env("house3",e)
+  $c.env("house4",f)
+  $c.actor("troll",a)
   10.times {|x| GC.start}
   SDL.init(SDL::INIT_EVERYTHING)
   SDL::GL.set_attr(SDL::GL::RED_SIZE, 8)
@@ -94,49 +103,56 @@ if __FILE__ == $0
   SDL::GL.set_attr(SDL::GL::DOUBLEBUFFER, 1)
   SDL::GL.set_attr(SDL::GL::MULTISAMPLEBUFFERS, 1)
   SDL::GL.set_attr(SDL::GL::MULTISAMPLESAMPLES, 4)
-  SDL::Screen.open 640,480,0,SDL::OPENGL
-  WINDOW_W=640
-  WINDOW_H=480
-  ratio=WINDOW_W/WINDOW_H
-#  window = SDL2::Window.create("testgl", 0, 0, WINDOW_W, WINDOW_H, SDL2::Window::Flags::OPENGL)
+  $verts={}
+  $indices={}
+  window_W=640
+  window_H=480
+  ratio=window_W/window_H
+
+  def init(window_W,window_H)
+    SDL::Screen.open window_W,window_H,0,SDL::OPENGL|SDL::RESIZABLE
+    ratio=window_W/window_H
+#  window = SDL2::Window.create("testgl", 0, 0, window_W, window_H, SDL2::Window::Flags::OPENGL)
 #  context = SDL2::GL::Context.create(window)
 #  SDL2::GL.swap_interval=1
-  glEnable(GL_CULL_FACE)
-  glShadeModel(GL_SMOOTH)
-  glEnable(GL_DEPTH_TEST)
-  glEnable(GL_BLEND)
-  glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA)
-  glDisable(GL_COLOR_MATERIAL)
-  global_ambient = [0.1, 0.1, 0.1, 1.0] # Set Ambient Lighting To Fairly Dark Light (No Color)   
-  light0pos = [0.0, 5.0, -5.0, 1.0] # Set The Light Position   
-  light0ambient = [0.1, 0.1, 0.1, 1.0] # More Ambient Light   
-  light0diffuse = [0.3, 0.3, 0.3, 1.0] # Set The Diffuse Light A Bit Brighter   
-  light0specular = [0.3, 0.3, 0.5, 1.0] # Fairly Bright Specular Lighting   
-  light0dir = [0.01,-1.0,0.1]
-  glLightModelfv(GL_LIGHT_MODEL_AMBIENT,global_ambient.pack('F*')) # Set The Global Ambient Light Model   
-  glLightfv(GL_LIGHT0, GL_POSITION, light0pos.pack('F*')) # Set The Lights Position   
-  glLightfv(GL_LIGHT0, GL_AMBIENT, light0ambient.pack('F*'))    # Set The Ambient Light   
-  glLightfv(GL_LIGHT0, GL_DIFFUSE, light0diffuse.pack('F*')) # Set The Diffuse Light   
-  glLightfv(GL_LIGHT0, GL_SPECULAR, light0specular.pack('F*'))  # Set Up Specular Lighting
-  glLightfv(GL_LIGHT0, GL_SPOT_DIRECTION, light0dir.pack('F*'))
-  glLightfv(GL_LIGHT0, GL_SPOT_CUTOFF,[90.0].pack('F'))
-  glEnable(GL_LIGHTING) # Enable Lighting   
-  glEnable(GL_LIGHT0) # Enable Light0   
-  glClearColor(0,0,0,1)
-  verts={}
-  indices={}
-  c.objs.keys.each do |x|
-    verts[x] = c.objs[x].v.flatten.to_a.pack('F*')
-    GC.start
-    indices[x] = {}
-    c.objs[x].models.keys.each do |y|
-      indices[x][y] = c.objs[x].models[y].faces.flatten.to_a.pack('I*')
+    glEnable(GL_CULL_FACE)
+    glShadeModel(GL_SMOOTH)
+    glEnable(GL_DEPTH_TEST)
+    glEnable(GL_BLEND)
+    glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA)
+    glDisable(GL_COLOR_MATERIAL)
+    global_ambient = [0.1, 0.1, 0.1, 1.0] # Set Ambient Lighting To Fairly Dark Light (No Color)   
+    $light0pos = [0.0, 5.0, -5.0, 1.0] # Set The Light Position   
+    light0ambient = [0.1, 0.1, 0.1, 1.0] # More Ambient Light   
+    light0diffuse = [0.3, 0.3, 0.3, 1.0] # Set The Diffuse Light A Bit Brighter   
+    light0specular = [0.3, 0.3, 0.5, 1.0] # Fairly Bright Specular Lighting   
+    $light0dir = [0.01,-1.0,0.1]
+    glLightModelfv(GL_LIGHT_MODEL_AMBIENT,global_ambient.pack('F*')) # Set The Global Ambient Light Model   
+    glLightfv(GL_LIGHT0, GL_POSITION, $light0pos.pack('F*')) # Set The Lights Position   
+    glLightfv(GL_LIGHT0, GL_AMBIENT, light0ambient.pack('F*'))    # Set The Ambient Light   
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, light0diffuse.pack('F*')) # Set The Diffuse Light   
+    glLightfv(GL_LIGHT0, GL_SPECULAR, light0specular.pack('F*'))  # Set Up Specular Lighting
+    glLightfv(GL_LIGHT0, GL_SPOT_DIRECTION, $light0dir.pack('F*'))
+    glLightfv(GL_LIGHT0, GL_SPOT_CUTOFF,[90.0].pack('F'))
+    glEnable(GL_LIGHTING) # Enable Lighting   
+    glEnable(GL_LIGHT0) # Enable Light0   
+    glClearColor(0,0,0,1)
+    $verts={}
+    $indices={}
+    $c.objs.keys.each do |x|
+      $verts[x] = $c.objs[x].v.flatten.to_a.pack('F*')
       GC.start
+      $indices[x] = {}
+      $c.objs[x].models.keys.each do |y|
+        $indices[x][y] = $c.objs[x].models[y].faces.flatten.to_a.pack('I*')
+        GC.start
+      end
     end
+    glEnableClientState(GL_VERTEX_ARRAY)
+    SDL::Key.enableKeyRepeat(10,10) 
   end
 
-  glEnableClientState(GL_VERTEX_ARRAY)
-  SDL::Key.enableKeyRepeat(10,10) 
+  init(window_W,window_H)
 
   loop do
     event = SDL::Event.wait
@@ -146,6 +162,11 @@ if __FILE__ == $0
         when SDL::Key::ESCAPE
           exit
         end
+      when SDL::Event::VideoResize
+        window_W,window_H = event.w,event.h
+        ratio = window_W/window_H
+        SDL::Screen.open(window_W,window_H,0,SDL::OPENGL|SDL::RESIZABLE)
+        init(window_W,window_H)
       end
 
     SDL::Key.scan
@@ -182,7 +203,7 @@ if __FILE__ == $0
       $dir = norm(rotatex($dir,ud))
     end
     if fb != 0
-      $pos = $pos + $dir*fb
+      $pos = $pos + $dir*fb*$stepfb
     end
     if slr != 0
       $pos = $pos + slr*norm(rotatey($dir,90))*$steplr
@@ -194,7 +215,7 @@ if __FILE__ == $0
 
 
 
-    glViewport(0, 0, WINDOW_W, WINDOW_H)
+    glViewport(0, 0, window_W, window_H)
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
     glMatrixMode(GL_PROJECTION)
     glLoadIdentity()
@@ -203,10 +224,10 @@ if __FILE__ == $0
     glLoadIdentity()
     GLU.gluLookAt(*$pos,*($pos+$dir),0,1,0)
     
-    glLightfv(GL_LIGHT0, GL_POSITION, light0pos.pack('F*'))
-    glLightfv(GL_LIGHT0, GL_SPOT_DIRECTION, light0dir.pack('F*'))
+    glLightfv(GL_LIGHT0, GL_POSITION, $light0pos.pack('F*'))
+    glLightfv(GL_LIGHT0, GL_SPOT_DIRECTION, $light0dir.pack('F*'))
 
-    c.draw(mydraw,verts,indices)
+    $c.draw(mydraw,$verts,$indices)
 
     SDL::GL.swap_buffers 
   end
