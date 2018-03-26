@@ -31,7 +31,7 @@ def rotatex(v,ang)
   return Numo::SFloat[v[0],v[1]+ang,v[2]]
 end
 
-messages=["SPACE to start pry console","LEFT/RIGHT to rotate left/right","UP/DOWN to rotate up/down","W/S to move forward/backard","A/D to strafe left/right","Q/E to move up/down","ENTER to reset position"]
+$messages=["SPACE to start pry console","LEFT/RIGHT to rotate left/right","UP/DOWN to rotate up/down","W/S to move forward/backward","A/D to strafe left/right","Q/E to move up/down","ENTER to reset position"]
 
 
 mydraw = Proc.new {|x,name,verts,indices|
@@ -65,7 +65,11 @@ mydraw = Proc.new {|x,name,verts,indices|
 if __FILE__ == $0
 #  $pos=Numo::SFloat[5,10,15]
 #  $rot=[0,0,1,0]
-  messages.each {|x| pp x}
+ $texture=[]
+ $tex=[]
+ $texid=[]
+
+ $messages.each {|x| pp x}
   $steplr=Numo::SFloat[0.2,0,0.2]
   $stepud=Numo::SFloat[0,0.2,0]
   $stepfb=Numo::SFloat[0.4,0.4,0.4]
@@ -103,18 +107,24 @@ if __FILE__ == $0
   SDL::GL.set_attr(SDL::GL::DOUBLEBUFFER, 1)
   SDL::GL.set_attr(SDL::GL::MULTISAMPLEBUFFERS, 1)
   SDL::GL.set_attr(SDL::GL::MULTISAMPLESAMPLES, 4)
+  
   $verts={}
   $indices={}
   window_W=640
   window_H=480
+  scalex=1.0
+  scaleh=1.0
   ratio=window_W/window_H
+
 
   def init(window_W,window_H)
     SDL::Screen.open window_W,window_H,0,SDL::OPENGL|SDL::RESIZABLE
     ratio=window_W/window_H
+
 #  window = SDL2::Window.create("testgl", 0, 0, window_W, window_H, SDL2::Window::Flags::OPENGL)
 #  context = SDL2::GL::Context.create(window)
 #  SDL2::GL.swap_interval=1
+
     glEnable(GL_CULL_FACE)
     glShadeModel(GL_SMOOTH)
     glEnable(GL_DEPTH_TEST)
@@ -154,6 +164,27 @@ if __FILE__ == $0
 
   init(window_W,window_H)
 
+  SDL::TTF.init
+  font=SDL::TTF.open("DejaVuSansMono.ttf",12,0)
+  font.hinting=SDL::TTF::HINTING_MONO
+  fw,fh = font.text_size("a")
+  $messages.size.times do |x|
+    w,h = font.text_size($messages[x])
+    tmp = font.render_blended_utf8($messages[x],255,255,255)
+    $texture = tmp.display_format_alpha
+    $tex[x] = ' ' * 4
+    glGenTextures(1, $tex[x])
+    $texid[x] = $tex[x].unpack('L')[0]
+    glBindTexture(GL_TEXTURE_2D, $texid[x])
+    glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,w,h,0,GL_RGBA,GL_UNSIGNED_BYTE,$texture.pixels)
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+    glGenerateMipmap(GL_TEXTURE_2D)
+    glBindTexture(GL_TEXTURE_2D, 0)
+    $texture.destroy
+  end
+
+
   loop do
     event = SDL::Event.wait
       case event
@@ -167,6 +198,8 @@ if __FILE__ == $0
         ratio = window_W/window_H
         SDL::Screen.open(window_W,window_H,0,SDL::OPENGL|SDL::RESIZABLE)
         init(window_W,window_H)
+        scalex=window_W/640.0
+        scaleh=window_H/480.0
       end
 
     SDL::Key.scan
@@ -212,9 +245,8 @@ if __FILE__ == $0
       $pos = $pos + sud*$stepud
     end
     lr = ud = fb = slr = sud = 0
-
-
-
+    
+    glEnable(GL_LIGHTING)
     glViewport(0, 0, window_W, window_H)
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
     glMatrixMode(GL_PROJECTION)
@@ -228,6 +260,37 @@ if __FILE__ == $0
     glLightfv(GL_LIGHT0, GL_SPOT_DIRECTION, $light0dir.pack('F*'))
 
     $c.draw(mydraw,$verts,$indices)
+
+    glMatrixMode(GL_PROJECTION)
+    glLoadIdentity()
+    gluOrtho2D(0, window_W, 0, window_H)
+    glMatrixMode(GL_MODELVIEW)
+    glLoadIdentity()
+    glDisable(GL_LIGHTING)
+
+#    glRotatef(45, 0.0, 0.0, 1.0)
+    x = 0
+    while x < $messages.length do
+      glEnable(GL_TEXTURE_2D)
+      glBindTexture(GL_TEXTURE_2D, $texid[x])
+      glBegin(GL_QUADS)
+    
+      glTexCoord2f(0.0, 0.0)
+      glVertex2i(0.0, window_H-x*fh*scaleh)
+    
+      glTexCoord2f(0.0, 1.0)
+      glVertex2i(0.0, window_H-(x+1)*fh*scaleh)
+    
+      glTexCoord2f(1.0, 1.0)
+      glVertex2i($messages[x].length*fw*scalex, window_H-(x+1)*fh*scaleh)
+    
+      glTexCoord2f(1.0, 0.0)
+      glVertex2i($messages[x].length*fw*scalex, window_H-x*fh*scaleh)
+      glEnd()
+      glBindTexture(GL_TEXTURE_2D,0)
+      x+=1
+    end
+
 
     SDL::GL.swap_buffers 
   end
