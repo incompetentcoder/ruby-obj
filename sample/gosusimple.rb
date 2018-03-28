@@ -80,7 +80,6 @@ if __FILE__ == $0
     def initialize
       super(640,480)
       self.caption="simple"
-      self.update_interval=33.3
       @font=Gosu::Font.new(14)
       @redraw = true
       global_ambient = [0.1, 0.1, 0.1, 1.0] # Set Ambient Lighting To Fairly Dark Light (No Color)   
@@ -143,19 +142,19 @@ if __FILE__ == $0
     def update
       @redraw = false
       if Gosu.button_down? Gosu::KB_LEFT
-        $dir = norm(rotatey($dir,2))
+        $dir = norm(rotatey($dir,1))
         @redraw = true
       end
       if Gosu.button_down? Gosu::KB_RIGHT
-        $dir = norm(rotatey($dir,-2))
+        $dir = norm(rotatey($dir,-1))
         @redraw = true
       end
       if Gosu.button_down? Gosu::KB_UP
-        $dir = norm(rotatex($dir,2))
+        $dir = norm(rotatex($dir,1))
         @redraw = true
       end
       if Gosu.button_down? Gosu::KB_DOWN
-        $dir = norm(rotatex($dir,-2))
+        $dir = norm(rotatex($dir,-1))
         @redraw = true
       end
       if Gosu.button_down? Gosu::KB_W
