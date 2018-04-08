@@ -36,9 +36,17 @@ $messages=["SPACE to start pry console","LEFT/RIGHT to rotate left/right","UP/DO
 
 mydraw = Proc.new {|x,name,verts,indices|
       if x.faces
-#        glLoadIdentity()
-#        glTranslatef(*$trans)
-#        glRotatef(*$rot)
+        if x.parent.vn
+          glEnableClientState(GL_NORMAL_ARRAY)
+          glNormalPointer(GL_FLOAT,0,$norms[name])
+        end
+
+        #
+    glPushMatrix()
+    glTranslatef(*x.parent.pos)
+    glRotatef(x.parent.rot[0],0,1,0)
+#    glTranslatef(*x.parent.pos)
+        #
         mat = (x.mat && x.mat.Kd) ? x.mat.Kd : x.parent.materials.values[0].Kd
         d = (x.mat && x.mat.d) ? x.mat.d : 1
         matkd = ((x.mat && x.mat.Kd) ? x.mat : x.parent.materials[0]).Kd
@@ -60,6 +68,9 @@ mydraw = Proc.new {|x,name,verts,indices|
           glEnd()
         end
       end
+      glPopMatrix()
+      glDisableClientState(GL_NORMAL_ARRAY)
+
 }
 
 if __FILE__ == $0
@@ -83,11 +94,12 @@ if __FILE__ == $0
   slr=0
   sud=0
   b=Obj.new("blenderhousetrimine2.obj")
-  a=Obj.new("blockychar.obj")
+  a=Obj.new("srtroll2.obj")
   d=Obj.new("blenderhousetrimine2.obj")
   e=Obj.new("blenderhousetrimine2.obj")
   f=Obj.new("blenderhousetrimine2.obj")
-  a.move([10,0,-10],[0,90,0])
+  g=Obj.new("blockychar.obj")
+#  a.move([10,0,-5],[0,90,0])
   b.move([10,0,-10],[0,0,0])
   d.move([10,0,-35],[0,0,0])
   e.move([-15,0,-10],[0,0,0])
@@ -123,7 +135,6 @@ if __FILE__ == $0
 
 #  window = SDL2::Window.create("testgl", 0, 0, window_W, window_H, SDL2::Window::Flags::OPENGL)
 #  context = SDL2::GL::Context.create(window)
-#  SDL2::GL.swap_interval=1
 
     glEnable(GL_CULL_FACE)
     glShadeModel(GL_SMOOTH)
@@ -132,7 +143,7 @@ if __FILE__ == $0
     glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA)
     glDisable(GL_COLOR_MATERIAL)
     global_ambient = [0.1, 0.1, 0.1, 1.0] # Set Ambient Lighting To Fairly Dark Light (No Color)   
-    $light0pos = [0.0, 5.0, -5.0, 1.0] # Set The Light Position   
+    $light0pos = [0.0, 8.1, -10.1, 1.0] # Set The Light Position   
     light0ambient = [0.1, 0.1, 0.1, 1.0] # More Ambient Light   
     light0diffuse = [0.3, 0.3, 0.3, 1.0] # Set The Diffuse Light A Bit Brighter   
     light0specular = [0.3, 0.3, 0.5, 1.0] # Fairly Bright Specular Lighting   
@@ -149,8 +160,12 @@ if __FILE__ == $0
     glClearColor(0,0,0,1)
     $verts={}
     $indices={}
+    $norms={}
     $c.objs.keys.each do |x|
       $verts[x] = $c.objs[x].v.flatten.to_a.pack('F*')
+
+      $norms[x] = $c.objs[x].vn.flatten.to_a.pack('F*') if $c.objs[x].vn #testing vertex normals
+
       GC.start
       $indices[x] = {}
       $c.objs[x].models.keys.each do |y|
@@ -159,7 +174,8 @@ if __FILE__ == $0
       end
     end
     glEnableClientState(GL_VERTEX_ARRAY)
-    SDL::Key.enableKeyRepeat(10,10) 
+#    SDL::Key.enableKeyRepeat(10,10)
+     SDL::Key.disableKeyRepeat 
   end
 
   init(window_W,window_H)
@@ -183,16 +199,57 @@ if __FILE__ == $0
     glBindTexture(GL_TEXTURE_2D, 0)
     $texture.destroy
   end
-
-
+  ticks = SDL::get_ticks
+  
+  a.pos=Numo::SFloat[10,0,-10]
+  a.rot=[0,0,0]
   loop do
-    event = SDL::Event.wait
+    while event = SDL::Event.poll
+ #   event = SDL::Event.wait
       case event
       when SDL::Event::KeyDown
         case event.sym
         when SDL::Key::ESCAPE
           exit
-        end
+        when SDL::Key::LEFT
+		lr=1
+	when SDL::Key::RIGHT
+		lr=-1
+	when SDL::Key::UP
+		ud=1
+	when SDL::Key::DOWN
+		ud=-1
+	when SDL::Key::W
+		fb=1
+	when SDL::Key::S
+		fb=-1
+	when SDL::Key::A
+		slr=1
+	when SDL::Key::D
+		slr=-1
+	when SDL::Key::Q
+		sud=1
+	when SDL::Key::E
+		sud=-1
+	when SDL::Key::RETURN
+		$pos=Numo::SFloat[0,4,10]
+		$dir=Numo::SFloat[0,0,-1]
+	end
+      when SDL::Event::KeyUp
+	      case event.sym
+	      when SDL::Key::LEFT,SDL::Key::RIGHT
+		      lr=0
+	      when SDL::Key::UP,SDL::Key::DOWN
+		      ud=0
+	      when SDL::Key::W,SDL::Key::S
+		      fb=0
+	      when SDL::Key::A,SDL::Key::D
+		      slr=0
+	      when SDL::Key::Q,SDL::Key::E
+		      sud=0
+	      end
+
+
       when SDL::Event::VideoResize
         window_W,window_H = event.w,event.h
         ratio = window_W/window_H
@@ -201,9 +258,13 @@ if __FILE__ == $0
         scalex=window_W/640.0
         scaleh=window_H/480.0
       end
+    end
+#    SDL::Key.scan
+    
 
-    SDL::Key.scan
+    a.rot[0] > 360 ? a.rot[0]=5 : a.rot[0]+=5
 
+=begin
     lr+=1 if SDL::Key.press?(SDL::Key::LEFT)
           #$dir = norm(rotatey($dir,2))
     lr-=1 if SDL::Key.press?(SDL::Key::RIGHT)
@@ -228,7 +289,7 @@ if __FILE__ == $0
       $pos = Numo::SFloat[0,4,10]
       $dir = Numo::SFloat[0,0,-1]
     end
-
+=end
     if lr != 0
       $dir = norm(rotatey($dir,lr))
     end
@@ -244,7 +305,7 @@ if __FILE__ == $0
     if sud != 0
       $pos = $pos + sud*$stepud
     end
-    lr = ud = fb = slr = sud = 0
+#    lr = ud = fb = slr = sud = 0
     
     glEnable(GL_LIGHTING)
     glViewport(0, 0, window_W, window_H)
@@ -255,10 +316,11 @@ if __FILE__ == $0
     glMatrixMode(GL_MODELVIEW)
     glLoadIdentity()
     GLU.gluLookAt(*$pos,*($pos+$dir),0,1,0)
-    
     glLightfv(GL_LIGHT0, GL_POSITION, $light0pos.pack('F*'))
     glLightfv(GL_LIGHT0, GL_SPOT_DIRECTION, $light0dir.pack('F*'))
 
+#    glPushMatrix()
+    
     $c.draw(mydraw,$verts,$indices)
 
     glMatrixMode(GL_PROJECTION)
@@ -291,7 +353,16 @@ if __FILE__ == $0
       x+=1
     end
 
+    last = SDL::get_ticks
+    delay = last - ticks
+#    sleep(delay*0.001) if delay > 0
+    if delay < 14
+    	SDL.delay(16 - delay)
+    end
+    ticks=SDL::get_ticks
 
-    SDL::GL.swap_buffers 
+
+    SDL::GL.swap_buffers
+
   end
 end
